@@ -10,6 +10,16 @@ export type SpeechToTextResponse = {
   text: string;
 };
 
+export type TranslateTranscriptionRequest = {
+  transcriptionJobId: string;
+  language: SupportedLanguage;
+};
+
+export type TranslateTranscriptionResponse = {
+  jobId: string;
+  text: string;
+};
+
 export type TranslationStatusResponse = {
   language: string;
   status: string;

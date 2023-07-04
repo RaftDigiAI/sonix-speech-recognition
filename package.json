@@ -1,7 +1,7 @@
 {
   "name": "sonix-speech-recognition",
-  "version": "2.0.0",
-  "description": "A library that produces audio transcriptions using the Sonix.AI service.",
+  "version": "2.1.0",
+  "description": "A library that produces audio transcriptions and translations using the Sonix.AI service.",
   "main": "./lib/index.js",
   "files": [
     "lib/**/*"
