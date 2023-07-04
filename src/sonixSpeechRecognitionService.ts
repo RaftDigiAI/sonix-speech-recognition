@@ -1,24 +1,22 @@
 import axios from 'axios';
+import * as fs from 'fs';
+import * as FormData from 'form-data';
 import {
   MAX_WAIT_TIME,
   RECOGNITION_POLLING_DELAY,
   SPEECH_BASE_URL,
 } from './constants';
 import {
+  SpeechToTextRequest,
+  SpeechToTextResponse,
   SupportedLanguage,
   TranscriptionResultResponse,
   TranscriptionStatusResponse,
   UploadAudioResponse,
 } from './types';
 
-type ISpeechToTextRequest = {
-  audioUrl: string;
-  fileName: string;
-  language: SupportedLanguage;
-};
-
 interface ISonixSpeechRecognitionService {
-  speechToText(request: ISpeechToTextRequest): Promise<string>;
+  speechToText(request: SpeechToTextRequest): Promise<SpeechToTextResponse>;
 }
 
 export class SonixSpeechRecognitionService
@@ -26,16 +24,31 @@ export class SonixSpeechRecognitionService
 {
   constructor(private readonly authKey: string) {}
 
-  private async uploadFileForTranscription(
-    audioUrl: string,
-    fileName: string,
-    language: SupportedLanguage
-  ): Promise<UploadAudioResponse> {
+  private async uploadFileForTranscription({
+    audioUrl,
+    audioFilePath,
+    fileName,
+    language,
+  }: SpeechToTextRequest): Promise<UploadAudioResponse> {
+    if (!audioUrl && !audioFilePath) {
+      throw new Error('Either audioUrl or audioFilePath must be provided');
+    }
+
     const form = new FormData();
 
-    form.append('file_url', audioUrl);
+    if (audioUrl) {
+      form.append('file_url', audioUrl);
+    }
+
+    if (audioFilePath) {
+      const fileStream = fs.createReadStream(audioFilePath);
+      form.append('file', fileStream, fileName);
+    }
+
     form.append('language', language);
-    form.append('name', fileName);
+    if (fileName) {
+      form.append('name', fileName);
+    }
 
     const response = await axios.post(SPEECH_BASE_URL, form, {
       headers: {
@@ -86,12 +99,14 @@ export class SonixSpeechRecognitionService
     audioUrl,
     fileName,
     language,
-  }: ISpeechToTextRequest): Promise<string> {
-    const fileUploadResponse = await this.uploadFileForTranscription(
+    audioFilePath,
+  }: SpeechToTextRequest): Promise<SpeechToTextResponse> {
+    const fileUploadResponse = await this.uploadFileForTranscription({
       audioUrl,
       fileName,
-      language
-    );
+      language,
+      audioFilePath,
+    });
 
     const startTime = Date.now();
 
@@ -115,7 +130,10 @@ export class SonixSpeechRecognitionService
       language
     );
 
-    return transcription;
+    return {
+      jobId: fileUploadResponse.id,
+      text: transcription,
+    };
   }
 
   private async delay(ms: number) {

@@ -1,3 +1,15 @@
+export type SpeechToTextRequest = {
+  audioUrl?: string;
+  audioFilePath?: string;
+  fileName?: string;
+  language: SupportedLanguage;
+};
+
+export type SpeechToTextResponse = {
+  jobId: string;
+  text: string;
+};
+
 export type TranslationStatusResponse = {
   language: string;
   status: string;
