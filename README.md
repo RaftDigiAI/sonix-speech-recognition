@@ -15,13 +15,28 @@ npm install sonix-speech-recognition
 
 ## Usage
 
+Transcribe a publicly available file
+
 ```ts
 import { SonixSpeechRecognitionService } from 'sonix-speech-recognition';
 
 const recognitionService = new SonixSpeechRecognitionService(AUTH_KEY);
-const recognizedText = await recognitionService.speechToText(
-  audioPublicUrl,
+const { jobId, text } = await recognitionService.speechToText({
+  audioUrl: audioPublicUrl,
   fileName,
-  'en'
-);
+  language: 'en',
+});
+```
+
+Transcribe a local file
+
+```ts
+import { SonixSpeechRecognitionService } from 'sonix-speech-recognition';
+
+const recognitionService = new SonixSpeechRecognitionService(AUTH_KEY);
+const { jobId, text } = await recognitionService.speechToText({
+  audioFilePath,
+  fileName,
+  language: 'en',
+});
 ```
