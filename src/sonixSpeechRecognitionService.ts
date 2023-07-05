@@ -148,66 +148,116 @@ export class SonixSpeechRecognitionService
     language,
     audioFilePath,
   }: SpeechToTextRequest): Promise<SpeechToTextResponse> {
-    const fileUploadResponse = await this.uploadFileForTranscription({
-      audioUrl,
-      fileName,
-      language,
-      audioFilePath,
-    });
+    let jobId = '';
+    try {
+      const fileUploadResponse = await this.uploadFileForTranscription({
+        audioUrl,
+        fileName,
+        language,
+        audioFilePath,
+      });
 
-    const startTime = Date.now();
+      jobId = fileUploadResponse.id;
 
-    let transcriptionStatus = await this.getTranscriptionStatus(
-      fileUploadResponse
-    );
+      const startTime = Date.now();
 
-    while (transcriptionStatus.status !== 'completed') {
-      if (Date.now() - startTime > MAX_WAIT_TIME) {
-        throw new Error('Transcription timeout');
-      }
-
-      await this.delay(RECOGNITION_POLLING_DELAY);
-      transcriptionStatus = await this.getTranscriptionStatus(
+      let transcriptionStatus = await this.getTranscriptionStatus(
         fileUploadResponse
       );
+
+      while (transcriptionStatus.status !== 'completed') {
+        if (Date.now() - startTime > MAX_WAIT_TIME) {
+          throw new Error('Transcription timeout');
+        }
+
+        await this.delay(RECOGNITION_POLLING_DELAY);
+        transcriptionStatus = await this.getTranscriptionStatus(
+          fileUploadResponse
+        );
+
+        if (transcriptionStatus.status === 'duplicate') {
+          if (!transcriptionStatus.duplicate_media_id) {
+            throw new Error(
+              'Sonix returned failed status and duplicate media id is not provided. Please check portal https://my.sonix.ai/ for more details'
+            );
+          }
+
+          const duplicateMediaId = transcriptionStatus.duplicate_media_id;
+          transcriptionStatus = {
+            ...transcriptionStatus,
+            id: duplicateMediaId,
+          };
+          break;
+        }
+
+        if (transcriptionStatus.status === 'failed') {
+          throw new Error(
+            'Sonix returned failed status. Please check portal https://my.sonix.ai/ for more details'
+          );
+        }
+      }
+
+      const transcription = await this.getTranscriptionResult(
+        transcriptionStatus.id,
+        language
+      );
+
+      return {
+        jobId: transcriptionStatus.id,
+        text: transcription,
+        status: 'completed',
+      };
+    } catch (error) {
+      return {
+        jobId,
+        text: '',
+        status: 'failed',
+        error: (error as Error).message,
+      };
     }
-
-    const transcription = await this.getTranscriptionResult(
-      transcriptionStatus.id,
-      language
-    );
-
-    return {
-      jobId: fileUploadResponse.id,
-      text: transcription,
-    };
   }
 
   async translateTranscription(
     request: TranslateTranscriptionRequest
   ): Promise<TranslateTranscriptionResponse> {
-    await this.queueTranslation(request);
-    const startTime = Date.now();
+    try {
+      await this.queueTranslation(request);
+      const startTime = Date.now();
 
-    let translationStatus = await this.getTranslationStatus(request);
+      let translationStatus = await this.getTranslationStatus(request);
 
-    while (translationStatus.status !== 'completed') {
-      if (Date.now() - startTime > MAX_WAIT_TIME) {
-        throw new Error('Transcription timeout');
+      while (translationStatus.status !== 'completed') {
+        if (Date.now() - startTime > MAX_WAIT_TIME) {
+          throw new Error('Transcription timeout');
+        }
+
+        await this.delay(RECOGNITION_POLLING_DELAY);
+        translationStatus = await this.getTranslationStatus(request);
+
+        if (translationStatus.status === 'failed') {
+          throw new Error(
+            'Sonix returned failed status. Please check portal https://my.sonix.ai/ for more details'
+          );
+        }
       }
 
-      await this.delay(RECOGNITION_POLLING_DELAY);
-      translationStatus = await this.getTranslationStatus(request);
+      const transcriptionEnglish = await this.getTranscriptionResult(
+        request.transcriptionJobId,
+        request.language
+      );
+
+      return {
+        jobId: request.transcriptionJobId,
+        text: transcriptionEnglish,
+        status: 'completed',
+      };
+    } catch (error) {
+      return {
+        jobId: request.transcriptionJobId,
+        text: '',
+        status: 'failed',
+        error: (error as Error).message,
+      };
     }
-
-    const transcriptionEnglish = await this.getTranscriptionResult(
-      request.transcriptionJobId,
-      request.language
-    );
-
-    return {
-      jobId: request.transcriptionJobId,
-      text: transcriptionEnglish,
-    };
   }
 }
