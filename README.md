@@ -21,11 +21,15 @@ Transcribe a publicly available file
 import { SonixSpeechRecognitionService } from 'sonix-speech-recognition';
 
 const recognitionService = new SonixSpeechRecognitionService(AUTH_KEY);
-const { jobId, text } = await recognitionService.speechToText({
+const { jobId, text, status, error } = await recognitionService.speechToText({
   audioUrl: audioPublicUrl,
   fileName,
   language: 'en',
 });
+
+if (status === 'failed') {
+  // handle error
+}
 ```
 
 Transcribe a local file
@@ -34,11 +38,15 @@ Transcribe a local file
 import { SonixSpeechRecognitionService } from 'sonix-speech-recognition';
 
 const recognitionService = new SonixSpeechRecognitionService(AUTH_KEY);
-const { jobId, text } = await recognitionService.speechToText({
+const { jobId, text, status, error } = await recognitionService.speechToText({
   audioFilePath,
   fileName,
   language: 'en',
 });
+
+if (status === 'failed') {
+  // handle error
+}
 ```
 
 Transcribe and translate a local file
@@ -53,9 +61,16 @@ const { jobId, text } = await recognitionService.speechToText({
   language: 'en',
 });
 
-const { text: translatedText } =
-  await sonixSpeechKitService.translateTranscription({
-    transcriptionJobId: jobId,
-    language: 'fr',
-  });
+const {
+  text: translatedText,
+  status,
+  error,
+} = await sonixSpeechKitService.translateTranscription({
+  transcriptionJobId: jobId,
+  language: 'fr',
+});
+
+if (status === 'failed') {
+  // handle error
+}
 ```

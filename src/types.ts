@@ -1,3 +1,5 @@
+export type JobStatus = 'completed' | 'failed';
+
 export type SpeechToTextRequest = {
   audioUrl?: string;
   audioFilePath?: string;
@@ -8,6 +10,8 @@ export type SpeechToTextRequest = {
 export type SpeechToTextResponse = {
   jobId: string;
   text: string;
+  status: JobStatus;
+  error?: string;
 };
 
 export type TranslateTranscriptionRequest = {
@@ -18,6 +22,8 @@ export type TranslateTranscriptionRequest = {
 export type TranslateTranscriptionResponse = {
   jobId: string;
   text: string;
+  status: JobStatus;
+  error?: string;
 };
 
 export type TranslationStatusResponse = {
@@ -42,6 +48,7 @@ export type TranscriptionStatusResponse = {
   video: boolean;
   status: string;
   created_at: number;
+  duplicate_media_id?: string;
   folder: {
     name: string;
     id: string;
